@@ -12,7 +12,7 @@ FILE_DIR = "C:/Users/lohit ramaraju/OneDrive/Desktop/IITJ/Main Project/Dataset/c
 DATA_PATH = pathlib.Path(FILE_DIR)
 IMG_SIZE = (128, 128)
 BATCH_SIZE = 16  
-EPOCHS = 50 
+EPOCHS = 100
 
 datagen = image.ImageDataGenerator(
     rescale=1./255,
