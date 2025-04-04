@@ -16,7 +16,7 @@ with open("C:/Users/lohit ramaraju/OneDrive/Desktop/IITJ/Main Project/saved_mode
     class_indices = json.load(f)
 class_names = list(class_indices.keys())
 
-def apply_swt(img, level=1):
+def apply_swt(img, level=2):
     """Apply Stationary Wavelet Transform (SWT) to an image."""
     coeffs = pywt.swt2(img, 'bior1.3', level=level)
     approx, (horiz, vert, diag) = coeffs[-1]
