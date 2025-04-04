@@ -51,11 +51,32 @@ model = models.Sequential([
     layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
     layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
+
+    layers.Conv2D(128, (3, 3), activation='relu', padding='same', kernel_regularizer=l2(0.01)),
+    layers.BatchNormalization(),
+    layers.Conv2D(128, (3, 3), activation='relu', padding='same', kernel_regularizer=l2(0.01)),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+
+    layers.Conv2D(256, (3, 3), activation='relu', padding='same', kernel_regularizer=l2(0.01)),
+    layers.BatchNormalization(),
+    layers.Conv2D(256, (3, 3), activation='relu', padding='same', kernel_regularizer=l2(0.01)),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+
+    layers.Conv2D(512, (3, 3), activation='relu', padding='same', kernel_regularizer=l2(0.01)),
+    layers.BatchNormalization(),
+    layers.Conv2D(512, (3, 3), activation='relu', padding='same', kernel_regularizer=l2(0.01)),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
     
     layers.Reshape((-1, 256)),  
+    TCN(512, return_sequences=True),
+    TCN(512, return_sequences=True),
+    TCN(256, return_sequences=True),
     TCN(256, return_sequences=True),
     TCN(128, return_sequences=True),
-    TCN(64, return_sequences=False),
+    TCN(128, return_sequences=False),
     layers.Dense(256, activation='relu'),
     layers.BatchNormalization(),
     layers.Dropout(0.5),
@@ -78,6 +99,8 @@ print("Model and class indices saved successfully.")
 
 def plot_training_history(history):
     plt.figure(figsize=(12, 4))
+    
+    # Accuracy Plot
     plt.subplot(1, 2, 1)
     plt.plot(history.history['accuracy'], label='Train Accuracy')
     plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
@@ -86,6 +109,7 @@ def plot_training_history(history):
     plt.xlabel('Epoch')
     plt.legend() 
     
+    # Loss Plot
     plt.subplot(1, 2, 2)
     plt.plot(history.history['loss'], label='Train Loss')
     plt.plot(history.history['val_loss'], label='Validation Loss')
@@ -93,8 +117,49 @@ def plot_training_history(history):
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend()
+    
     plt.show()
+
 plot_training_history(history)
 
+# Predictions
+y_true = np.concatenate([val_generator[i][1] for i in range(len(val_generator))])
+y_pred_probs = model.predict(val_generator)
+y_pred = np.argmax(y_pred_probs, axis=1)
+
+# Compute ROC Curve for Multi-Class (Fix: One-vs-Rest Approach)
+y_true_bin = label_binarize(y_true, classes=np.arange(nClass))
+for class_idx in range(nClass):
+    fpr, tpr, _ = roc_curve(y_true_bin[:, class_idx], y_pred_probs[:, class_idx])
+    roc_auc = auc(fpr, tpr)
+
+    plt.plot(fpr, tpr, label=f'Class {class_idx} (AUC = {roc_auc:.2f})')
+
+plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend()
+plt.show()
+
+# Compute Confusion Matrix
+cm = confusion_matrix(y_true, y_pred)
+plt.figure(figsize=(6, 4))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=val_generator.class_indices, yticklabels=val_generator.class_indices)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Confusion Matrix')
+plt.show()
+
+# Compute Precision-Recall Curve
+precision, recall, _ = precision_recall_curve(y_true_bin.ravel(), y_pred_probs.ravel())
+
+plt.plot(recall, precision, marker='.')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Precision-Recall Curve')
+plt.show()
+
+print("Model evaluation and visualization completed successfully.")
 test_loss, test_accuracy = model.evaluate(val_generator)
 print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
